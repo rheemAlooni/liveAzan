@@ -1,0 +1,161 @@
+#ifndef STREAM_H
+#define STREAM_H
+
+const char stream_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بث اذان الحارة</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #041e0c;
+            color: #ffffff;
+        }
+        .card {
+            background: #062c12;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 350px;
+            border: 1px solid #d4af37;
+            text-align: center;
+        }
+        h1 { color: #d4af37; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        p  { color: #a0c49d; font-size: 1rem; margin-bottom: 1.8rem; }
+
+        .mic-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%   { transform: scale(1);   opacity: 1; }
+            50%  { transform: scale(1.15); opacity: 0.7; }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 13px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-start {
+            background-color: #d4af37;
+            color: #041e0c;
+        }
+        .btn-start:hover { background-color: #b8962d; }
+        .btn-stop {
+            background-color: #7a1a1a;
+            color: #fff;
+        }
+        .btn-stop:hover { background-color: #5c1010; }
+
+        .status {
+            margin-top: 1.2rem;
+            font-size: 0.95rem;
+            color: #a0c49d;
+            min-height: 1.2em;
+        }
+        .back-link {
+            display: block;
+            margin-top: 1.5rem;
+            color: #a0c49d;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { color: #d4af37; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>بث اذان الحارة</h1>
+    <p>استمع للبث الصوتي المباشر</p>
+
+    <audio id="audioEl"></audio>
+
+    <button class="btn btn-start" id="mainBtn" onclick="toggleStream()">▶ ابدأ الاستماع</button>
+
+    <div class="status" id="statusMsg">اضغط للاتصال بالبث</div>
+    <a href="/" class="back-link">→ العودة للرئيسية</a>
+</div>
+
+<script>
+    let audioCtx;
+let socket;
+let isStreaming = false;
+
+function toggleStream() {
+    const btn = document.getElementById('mainBtn');
+    const status = document.getElementById('statusMsg');
+
+    if (!isStreaming) {
+        // Initialize AudioContext on first click (Browser requirement)
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        }
+        
+        // Open the pipe
+        socket = new WebSocket(`ws://${window.location.hostname}:81`);
+        socket.binaryType = 'arraybuffer';
+
+        socket.onmessage = (event) => {
+            let rawData = new Int16Array(event.data);
+            playChunk(rawData);
+        };
+
+        btn.textContent = '⏹ إيقاف الاستماع';
+        btn.className = 'btn btn-stop';
+        status.textContent = 'متصل — يبث الآن...';
+        isStreaming = true;
+    } else {
+        // Close the pipe
+        socket.close();
+        btn.textContent = '▶ ابدأ الاستماع';
+        btn.className = 'btn btn-start';
+        status.textContent = 'تم إيقاف البث';
+        isStreaming = false;
+    }
+}
+
+let nextPlayTime = 0;
+function playChunk(rawSamples) {
+    if (!audioCtx) return;
+    
+    let floatSamples = new Float32Array(rawSamples.length);
+    for (let i = 0; i < rawSamples.length; i++) {
+        floatSamples[i] = rawSamples[i] * 1 / 32768.0; 
+    }
+
+    let audioBuffer = audioCtx.createBuffer(1, floatSamples.length, 16000);
+    audioBuffer.getChannelData(0).set(floatSamples);
+
+    let source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioCtx.destination);
+    let startTime = Math.max(audioCtx.currentTime + 0.05, nextPlayTime);
+    source.start(startTime);
+    nextPlayTime = startTime + audioBuffer.duration;    
+}
+</script>
+</body>
+</html>
+)rawliteral";
+
+#endif

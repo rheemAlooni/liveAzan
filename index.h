@@ -1,0 +1,124 @@
+#ifndef INDEX_H
+#define INDEX_H
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بث اذان الحارة</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #041e0c;
+            color: #ffffff;
+        }
+        .card { 
+            background: #062c12;
+            padding: 2rem; 
+            border-radius: 15px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); 
+            width: 100%; 
+            max-width: 350px; 
+            border: 1px solid #d4af37;
+            text-align: center;
+        }
+        h1 { 
+            color: #d4af37;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: #a0c49d;
+            margin-bottom: 1.5rem;
+            font-weight: normal;
+        }
+        .time-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 10px; 
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2); 
+        }
+        .time-row:last-child { border-bottom: none; }
+        .label { font-weight: bold; font-size: 1.1rem; }
+        .time { color: #d4af37; font-family: monospace; font-size: 1.2rem; }
+        #loading { padding: 20px; color: #a0c49d; }
+        
+        .audio-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background-color: #d4af37;
+            color: #041e0c;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .audio-btn:hover { background-color: #b8962d; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>بث اذان الحارة</h1>
+    <h2 id="location-name">مكة المكرمة</h2>
+    <div id="times-container">
+        <div id="loading">جاري تحميل الأوقات...</div>
+    </div>
+    <a href="/stream" class="audio-btn">استمع للبث المباشر</a>
+</div>
+
+<script>
+    async function getPrayerTimes() {
+        const city = 'Makkah';
+        const country = 'SA';
+        const method = 4;
+        
+        const arabicNames = {
+            'Fajr': 'الفجر',
+            'Sunrise': 'الشروق',
+            'Dhuhr': 'الظهر',
+            'Asr': 'العصر',
+            'Maghrib': 'المغرب',
+            'Isha': 'العشاء'
+        };
+
+        try {
+            const response = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=${method}`);
+            const data = await response.json();
+            const timings = data.data.timings;
+
+            const displayPrayers = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+            
+            let html = '';
+            displayPrayers.forEach(prayer => {
+                html += `
+                    <div class="time-row">
+                        <span class="label">${arabicNames[prayer]}</span>
+                        <span class="time">${timings[prayer]}</span>
+                    </div>`;
+            });
+
+            document.getElementById('times-container').innerHTML = html;
+        } catch (error) {
+            document.getElementById('times-container').innerHTML = "حدث خطأ في تحميل البيانات.";
+            console.error(error);
+        }
+    }
+
+    getPrayerTimes();
+</script>
+
+</body>
+</html>
+)rawliteral";
+
+#endif
