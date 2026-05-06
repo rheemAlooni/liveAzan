@@ -18,7 +18,8 @@ let esp32Source = null;
 
 wss.on('connection', (ws, req) => {
     // We check if the connection is from the ESP32 (you can add a simple password/header)
-    const isESP32 = req.headers['user-agent'] === 'ESP32-S3-Broadcaster';
+    // const isESP32 = req.headers['user-agent'] === 'ESP32-S3-Broadcaster';
+    const isESP32 = req.headers['x-device-type'] === 'ESP32-S3-Broadcaster';
 
     if (isESP32) {
         console.log('ESP32 Broadcaster connected');
